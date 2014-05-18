@@ -6,52 +6,72 @@ First of all, we need to obtain the data file from its [source](https://d396qusz
 
 To load the data **./data/activity.csv**:
 
-```{r loadData, echo = TRUE}
+
+```r
 # Read data using read.csv()
-activity <- read.csv("./data/activity.csv", colClasses = c("numeric", "character", "numeric"))
+activity <- read.csv("./data/activity.csv", colClasses = c("numeric", "character", 
+    "numeric"))
 ```
+
 
 To preprocess the data:
 
-```{r preprocessData, echo = TRUE}
+
+```r
 # Format date column into 'Date' class
-activity$date <-as.Date(activity$date, format = '%Y-%m-%d')
+activity$date <- as.Date(activity$date, format = "%Y-%m-%d")
 # Better format for interval
 activity$interval <- sprintf("%02d:%02d", activity$interval%/%100, activity$interval%%100)
 activity$datetime <- paste(activity$date, activity$interval)
 # Subset data without NA values for next steps in the assignment
-activitySub <- activity[complete.cases(activity),]
+activitySub <- activity[complete.cases(activity), ]
 # Use appropriate format of date and time
-activitySub$datetime<-strptime(activitySub$datetime, "%Y-%m-%d %H:%M")
+activitySub$datetime <- strptime(activitySub$datetime, "%Y-%m-%d %H:%M")
 # Use str
 str(activitySub)
+```
 
 ```
+## 'data.frame':	15264 obs. of  4 variables:
+##  $ steps   : num  0 0 0 0 0 0 0 0 0 0 ...
+##  $ date    : Date, format: "2012-10-02" "2012-10-02" ...
+##  $ interval: chr  "00:00" "00:05" "00:10" "00:15" ...
+##  $ datetime: POSIXlt, format: "2012-10-02 00:00:00" "2012-10-02 00:05:00" ...
+```
+
 
 ## What is mean total number of steps taken per day?
 Create a summary of the total number of steps taken per day using *ddply* from the *plyr* package.
 
-```{r stepsDay, echo = TRUE}
+
+```r
 library(plyr)
 activitySubperDay <- ddply(activitySub, .(date), summarize, stepsday = sum(steps))
 ```
 
+
 * Plot the histogram of the total number of steps taken each day:
 
-```{r histplot, echo = TRUE, fig.width=5, fig.height = 4}
+
+```r
 par(mar = c(5, 4, 1, 1))
-hist(activitySubperDay$stepsday, main = "Total Number of Steps Taken Each Day",
-     xlab = "Number of Steps")
+hist(activitySubperDay$stepsday, main = "Total Number of Steps Taken Each Day", 
+    xlab = "Number of Steps")
 ```
+
+![plot of chunk histplot](figure/histplot.png) 
+
 
 * Calculate and report the mean and median total number of steps taken per day
 
-```{r computeMeanMedian, echo = TRUE}
+
+```r
 meanStepsDay <- mean(activitySubperDay$stepsday)
 medianStepsDay <- median(activitySubperDay$stepsday)
 ```
 
-The mean of the total number of steps taken per day is `r meanStepsDay` while the median is `r medianStepsDay`.
+
+The mean of the total number of steps taken per day is 1.0766 &times; 10<sup>4</sup> while the median is 1.0765 &times; 10<sup>4</sup>.
 
 
 ## What is the average daily activity pattern?
@@ -62,30 +82,36 @@ To tackle this question the following is created:
 
 First let's create the variables to be plotted
 
-```{r ave_accross_day, echo = TRUE}
+
+```r
 library(plyr)
 ave_steps_day <- ddply(activitySub, .(interval), summarize, ave_stepsday = mean(steps))
-x_time <- as.POSIXct(ave_steps_day$interval,format="%H:%M")
+x_time <- as.POSIXct(ave_steps_day$interval, format = "%H:%M")
 y_axis <- ave_steps_day$ave_stepsday
 ```
 
+
 Now, let's plot them
 
-```{r timeseriesplot, echo = TRUE, fig.width=5, fig.height = 4}
-plot(x_time, y_axis, type = "l",
-     main = "5-minute Interval Average Number \nof Steps across All Days ",
-     xlab = "Time Every 5 Minutes", ylab = "Average Number of Steps")
+
+```r
+plot(x_time, y_axis, type = "l", main = "5-minute Interval Average Number \nof Steps across All Days ", 
+    xlab = "Time Every 5 Minutes", ylab = "Average Number of Steps")
 ```
+
+![plot of chunk timeseriesplot](figure/timeseriesplot.png) 
+
 
 
 * Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
 
-```{r computeMaxLoc, echo = TRUE}
-MaxNoSteps <- ave_steps_day$interval[which.max(ave_steps_day$ave_stepsday)]
 
+```r
+MaxNoSteps <- ave_steps_day$interval[which.max(ave_steps_day$ave_stepsday)]
 ```
 
-The maximum number of steps is at `r MaxNoSteps`.
+
+The maximum number of steps is at 08:35.
 
 ## Imputing missing values
 
@@ -93,13 +119,14 @@ There are a number of days/intervals where there are missing values (coded as NA
 
 Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
 
-```{r N_Missing, echo = TRUE}
+
+```r
 ok <- complete.cases(activity)
 NMissingValues <- sum(!ok)
-
 ```
 
-There are `r NMissingValues`  rows with NAs in the original **activity** data set.
+
+There are 2304  rows with NAs in the original **activity** data set.
 
 ### Filling in values
 
@@ -107,45 +134,55 @@ Since any strategy is possible, and missing values correspond to a full day at e
 
 The new data set with NAs filled in is called *activity_new*.
 
-```{r fillMissing, echo = TRUE}
+
+```r
 activity_new <- activity
 activity_new$steps[!ok] <- ave_steps_day$ave_stepsday
-
 ```
 
-```{r stepsDay_new, echo = TRUE}
+
+
+```r
 library(plyr)
 activity_newperDay <- ddply(activity_new, .(date), summarize, stepsday = sum(steps))
 ```
 
+
 * Plot the histogram of the total number of steps taken each day for the *activity_new* data:
 
-```{r histplot_new, echo = TRUE, fig.width=5, fig.height = 4}
-hist(activity_newperDay$stepsday,
-     main = "Total Number of Steps Taken Each Day \nfilled-in Dataset",
-     xlab = "Number of Steps")
+
+```r
+hist(activity_newperDay$stepsday, main = "Total Number of Steps Taken Each Day \nfilled-in Dataset", 
+    xlab = "Number of Steps")
 ```
+
+![plot of chunk histplot_new](figure/histplot_new.png) 
+
 
 * Calculate and report the mean and median total number of steps taken per day in *activity_new*.
 
-```{r computeMeanMedian_new, echo = TRUE}
+
+```r
 meanStepsDay_new <- mean(activity_newperDay$stepsday)
 medianStepsDay_new <- median(activity_newperDay$stepsday)
 ```
 
-The mean of the total number of steps taken per day after fixing missing values is `r meanStepsDay_new` while the median is `r medianStepsDay_new`.
+
+The mean of the total number of steps taken per day after fixing missing values is 1.0766 &times; 10<sup>4</sup> while the median is 1.0766 &times; 10<sup>4</sup>.
 
 #### Discussion
 Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
 
 Let's calculate the mean and median differences in both cases.
 
-```{r difference_mmd, echo = TRUE}
-percentage_difmean <- abs(meanStepsDay_new - meanStepsDay)/meanStepsDay*100
-percentage_difmedian <- abs(medianStepsDay_new - medianStepsDay)/meanStepsDay*100
 
+```r
+percentage_difmean <- abs(meanStepsDay_new - meanStepsDay)/meanStepsDay * 100
+percentage_difmedian <- abs(medianStepsDay_new - medianStepsDay)/meanStepsDay * 
+    100
 ```
-We can notice from the above computations and results that the mean and median when missing values were omitted almost did not change when missing values were filled in for the average number of steps across all days with a variation of `r percentage_difmean`% for the mean, and `r percentage_difmedian`% for the median.Thus, we can see that the imputation method was adequate.
+
+We can notice from the above computations and results that the mean and median when missing values were omitted almost did not change when missing values were filled in for the average number of steps across all days with a variation of 0% for the mean, and 0.011% for the median.Thus, we can see that the imputation method was adequate.
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
@@ -154,36 +191,38 @@ For this part.
 
 * Create a new factor variable with two levels - "weekday" and "weekend".
 
-```{r weekdays_weekends, echo = TRUE}
-activity_new$weekday <- weekdays(activity_new$date)
-idx_weekend <- activity_new$weekday == "Saturday" | activity_new$weekday == "Sunday"
-activity_new$wdaywend <- factor(idx_weekend, labels=c("weekday","weekend"))
 
+```r
+activity_new$weekday <- weekdays(activity_new$date)
+idx_weekend <- activity_new$weekday == "Saturday" | activity_new$weekday == 
+    "Sunday"
+activity_new$wdaywend <- factor(idx_weekend, labels = c("weekday", "weekend"))
 ```
+
 
 * Make a plot with the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). 
 
-```{r plotwdaywend, echo = TRUE}
+
+```r
 # subset weekday data
 activity_new_weekday <- activity_new[activity_new$wdaywend == "weekday", ]
 activity_new_weekend <- activity_new[activity_new$wdaywend == "weekend", ]
 
 library(plyr)
-steps_new_aveWday <- ddply(activity_new_weekday, .(interval),
-                              summarize, ave_stepsWeekday = mean(steps))
-x_time_weekday <- as.POSIXct(steps_new_aveWday$interval,format="%H:%M")
+steps_new_aveWday <- ddply(activity_new_weekday, .(interval), summarize, ave_stepsWeekday = mean(steps))
+x_time_weekday <- as.POSIXct(steps_new_aveWday$interval, format = "%H:%M")
 y_axis_weekday <- steps_new_aveWday$ave_stepsWeekday
 
-steps_new_aveWend <- ddply(activity_new_weekend, .(interval),
-                              summarize, ave_stepsWeekend = mean(steps))
-x_time_weekend <- as.POSIXct(steps_new_aveWend$interval,format="%H:%M")
+steps_new_aveWend <- ddply(activity_new_weekend, .(interval), summarize, ave_stepsWeekend = mean(steps))
+x_time_weekend <- as.POSIXct(steps_new_aveWend$interval, format = "%H:%M")
 y_axis_weekend <- steps_new_aveWend$ave_stepsWeekend
 
 par(mfrow = c(2, 1))
-plot(x_time_weekday, y_axis_weekday, type = "l",
-     main = "5-minute Interval Average Number \nof Steps across All Weekdays ",
-     xlab = "Time Every 5 Minutes", ylab = "Average Number of Steps")
-plot(x_time_weekend, y_axis_weekend, type = "l",
-     main = "5-minute Interval Average Number \nof Steps across All Weekends ",
-     xlab = "Time Every 5 Minutes", ylab = "Average Number of Steps")
+plot(x_time_weekday, y_axis_weekday, type = "l", main = "5-minute Interval Average Number \nof Steps across All Weekdays ", 
+    xlab = "Time Every 5 Minutes", ylab = "Average Number of Steps")
+plot(x_time_weekend, y_axis_weekend, type = "l", main = "5-minute Interval Average Number \nof Steps across All Weekends ", 
+    xlab = "Time Every 5 Minutes", ylab = "Average Number of Steps")
 ```
+
+![plot of chunk plotwdaywend](figure/plotwdaywend.png) 
+
